@@ -1,8 +1,7 @@
-import * as core from '@actions/core'
-import { Octokit } from '@octokit/rest'
-import makeStatus, { StatusRequest } from './makeStatusRequest'
-import makeStatusRequest from './makeStatusRequest';
-import { RequestParameters } from '@octokit/types';
+import * as core from '@actions/core';
+import { Octokit } from '@octokit/rest';
+import makeStatusRequest, { StatusRequest } from './makeStatusRequest';
+import { getErrorMessage } from './utils';
 
 async function run(): Promise<void> {
   const authToken: string = core.getInput('authToken');
@@ -11,43 +10,48 @@ async function run(): Promise<void> {
   try {
     octokit = new Octokit({
       auth: authToken,
-      userAgent: "github-status-action",
+      userAgent: 'github-status-action',
       baseUrl: 'https://api.github.com',
       log: {
-        debug: () => { },
-        info: () => { },
+        debug: () => {},
+        info: () => {},
         warn: console.warn,
-        error: console.error
+        error: console.error,
       },
       request: {
         agent: undefined,
         fetch: undefined,
-        timeout: 0
-      }
+        timeout: 0,
+      },
     });
   } catch (error) {
-    core.setFailed("Error creating octokit:\n" + error.message);
+    core.setFailed('Error creating octokit:\n' + getErrorMessage(error));
     return;
   }
 
   if (octokit == null) {
-    core.setFailed("Error creating octokit:\noctokit was null");
+    core.setFailed('Error creating octokit:\noctokit was null');
     return;
   }
 
-  let statusRequest: StatusRequest
+  let statusRequest: StatusRequest;
   try {
     statusRequest = makeStatusRequest();
-  }
-  catch (error) {
-    core.setFailed(`Error creating status request object: ${error.message}`);
+  } catch (error) {
+    core.setFailed(
+      `Error creating status request object: ${getErrorMessage(error)}`
+    );
     return;
   }
 
-  try {   
-    await octokit.repos.createStatus(statusRequest);
+  try {
+    await octokit.repos.createCommitStatus(statusRequest);
   } catch (error) {
-    core.setFailed(`Error setting status:\n${error.message}\nRequest object:\n${JSON.stringify(statusRequest, null, 2)}`);
+    core.setFailed(
+      `Error setting status:\n${getErrorMessage(
+        error
+      )}\nRequest object:\n${JSON.stringify(statusRequest, null, 2)}`
+    );
   }
 }
 
